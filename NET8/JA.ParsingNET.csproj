@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Deterministic>false</Deterministic>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <RootNamespace>JA</RootNamespace>
+    <FileVersion>1.0</FileVersion>
+    <AssemblyVersion>1.0.*</AssemblyVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Expressions\Compiling\**" />
+    <EmbeddedResource Remove="Expressions\Compiling\**" />
+    <None Remove="Expressions\Compiling\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove=".editorconfig" />
+    <None Remove=".gitignore" />
+    <None Remove="LICENSE" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EditorConfigFiles Remove="C:\Users\jalex\Source\GitHub\JA.ParseExprCompile\.editorconfig" />
+  </ItemGroup>
+
+</Project>
