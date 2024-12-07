@@ -27,13 +27,15 @@ namespace JA.Expressions
         static readonly Dictionary<string, double> parameters = [];
         public static IReadOnlyDictionary<string, double> Parameters => parameters;
         public static void ClearParameters() => parameters.Clear();
+        public static void AddParameter(string name, double value)
+            => parameters[name]=value;
         #endregion
 
         #region Abstract
         public abstract int Rank { get; }
         protected internal abstract Expr Substitute(Expr variable, Expr value);
         public abstract IQuantity Eval(params (string sym, double val)[] parameters);
-        protected internal abstract void Compile(ILGenerator gen, Dictionary<string, int> env);
+        protected internal abstract void Compile(ILGenerator gen, Dictionary<string, (int index, Type type)> env);
         protected internal abstract void FillSymbols(ref List<string> variables);
         protected internal abstract void FillValues(ref List<double> values);
         #endregion
@@ -183,13 +185,21 @@ namespace JA.Expressions
                 }
                 body+=this.PartialDerivative(sym)*q_dot;
             }
-            return body;
+            return body.Simplify();
         }
         #endregion
 
         #region Transformations
         public Expr Simplify()
         {
+            if (IsArray(out var elements))
+            {
+                for (int i = 0; i<elements.Length; i++)
+                {
+                    elements[i]=elements[i].Simplify();
+                }
+                return Array(elements);
+            }
             Expr prev;
             Expr result = this;
             do
@@ -203,7 +213,8 @@ namespace JA.Expressions
                     {
                         case "+": result=unary.Argument; break;
                         case "-": result=-unary.Argument; break;
-                    }
+                        default: result=new UnaryExpr(unary.Op, unary.Argument.Simplify()); break;
+                    }                              
                     break;
                     case BinaryExpr binary:
                     switch (binary.Op.Identifier)
@@ -212,6 +223,8 @@ namespace JA.Expressions
                         case "-": result=binary.Left-binary.Right; break;
                         case "*": result=binary.Left*binary.Right; break;
                         case "/": result=binary.Left/binary.Right; break;
+                        case "^": result=binary.Left^binary.Right; break;
+                        default: result=new BinaryExpr(binary.Op, binary.Left.Simplify(), binary.Right.Simplify()); break;
                     }
                     break;
                 }

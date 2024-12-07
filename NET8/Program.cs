@@ -27,7 +27,6 @@ namespace JA
             CompileArrayDemo();
             CompileMatrixDemo();
             DoublePendulumDemo();
-                        
         }
 
 
@@ -200,27 +199,30 @@ namespace JA
             Console.WriteLine($"*** DEMO [{++testIndex}] : {GetMethodName()} ***");
             Console.ForegroundColor=ConsoleColor.Gray;
             Console.WriteLine("Matrix Expression");
-            var tt = Expr.Variable("t");
+            var t = Expr.Variable("t");
             var expr = Expr.Jagged( new Expr[][] {
-                [1/(1+tt^2), 1-(tt^2)/(1+tt^2)],
-                [tt/(1+tt^2), -1/(1+tt^2)]});
+                [1/(1+t^2), 1-(t^2)/(1+t^2)],
+                [t/(1+t^2), -1/(1+t^2)]});
 
-            var fexpr = new Function("f", expr, "t");
-            Console.WriteLine(fexpr);
-            var f = fexpr.Compile<QArg1>();
+            var f_test = expr.Eval((t, 0.5));
+            Console.WriteLine($"f(0.5) = {f_test}");
+
+            var fun = new Function("f", expr, t);
+            Console.WriteLine(fun);
+            var f = fun.Compile<QArg1>();
             Console.WriteLine($"{"t",-12} {"f(t)"}");
             JaggedMatrix.ShowAsTable=false;
             for (int i = 0; i <= 10; i++)
             {
-                var t = 0.10 * i;
-                var y = f(t);
-                Console.Write($"{t,-12:g4}");
+                var t_val = 0.10 * i;
+                var y = f(t_val);
+                Console.Write($"{t_val,-12:g4}");
                 Console.ForegroundColor=ConsoleColor.Cyan;
                 Console.WriteLine($" {y:g4}");
                 Console.ForegroundColor=ConsoleColor.Gray;
             }
             JaggedMatrix.ShowAsTable=true;
-            var fp = fexpr.PartialDerivative(tt);
+            var fp = fun.PartialDerivative(t);
             Console.WriteLine(fp);
 
             Console.WriteLine("Solve a 2×2 system of equations.");
@@ -239,8 +241,8 @@ namespace JA
             JaggedMatrix.ShowAsTable=false;
             for (int i = 0; i <= 10; i++)
             {
-                var t = 0.10 * i;
-                var rval = r.Eval(("t",t));
+                var t_val = 0.10 * i;
+                var rval = r.Eval(("t",t_val));
                 Console.Write($"{t,-12:g4}");
                 Console.ForegroundColor=ConsoleColor.DarkYellow;
                 Console.WriteLine($" {rval:g8}");
@@ -248,7 +250,7 @@ namespace JA
             }
             JaggedMatrix.ShowAsTable=true;
             Console.ForegroundColor=ConsoleColor.Gray;
-            var DM = Expr.Matrix(2,2, 1.0, Expr.Pi*tt ,  0.0, 1-(tt^2) );
+            var DM = Expr.Matrix(2,2, 1.0, Expr.Pi*t ,  0.0, 1-(t^2) );
 
             Console.WriteLine($"Matrix = {DM}");
 
@@ -256,7 +258,8 @@ namespace JA
             Console.WriteLine(f_DM);
             var ft = f_DM.Compile<QArg1>();
             Console.WriteLine("f(0)=");
-            Console.WriteLine($"{ft(1/double.Pi):g4}");
+            Scalar inv_pi = 1/double.Pi;
+            Console.WriteLine($"{ft(inv_pi):g4}");
 
             Console.WriteLine();
         }
@@ -376,22 +379,28 @@ namespace JA
             Console.ForegroundColor=ConsoleColor.Gray;
             Expr.ClearParameters();
 
-            VariableExpr L = "L", m="m", q_1="q_1", qp_1="qp_1", q_2="q_2", qp_2="qp_2";
+            Function.ShowAsTable=true;
+
+            VariableExpr q_1="q_1", qp_1="qp_1", q_2="q_2", qp_2="qp_2";
+            ConstExpr L = Expr.Const("L", 0.75), m = Expr.Const("m", 0.15), I = Expr.Const("I", 0.0625);
 
             Expr x_1 = L*Expr.Sin(q_1), y_1 = -L*Expr.Cos(q_1);
             Expr x_2 = x_1 + L*Expr.Sin(q_1 + q_2), y_2 = y_1 -L*Expr.Cos(q_1+q_2);
+            
+            var f_pos_1 = new Function("f_pos_1", Expr.Vec3(x_1, y_1, Expr.Zero), q_1, q_2);
+            var f_pos_2 = new Function("f_pos_2", Expr.Vec3(x_2, y_2, Expr.Zero), q_1, q_2);
 
-            var pos_1 = Expr.Vec3(x_1, y_1, Expr.Zero);
-            var pos_2 = Expr.Vec3(x_2, y_2, Expr.Zero);
+            Console.WriteLine($"{f_pos_1}");
+            Console.WriteLine($"{f_pos_2}");
 
-            Console.WriteLine($"pos_1 = {pos_1}");
-            Console.WriteLine($"pos_2 = {pos_2}");
+            var f_vel_1 = f_pos_1.TotalDerivative("f_vel_1");
+            var f_vel_2 = f_pos_2.TotalDerivative("f_vel_2");
 
-            var vec_1 = pos_1.PartialDerivative(q_1)*qp_1 + pos_1.PartialDerivative(q_2)*qp_2;
-            var vec_2 = pos_2.PartialDerivative(q_1)*qp_1 + pos_2.PartialDerivative(q_2)*qp_2;
+            Console.WriteLine($"{f_vel_1}");
+            Console.WriteLine($"{f_vel_2}");
 
-            Console.WriteLine($"vec_1 = {vec_1}");
-            Console.WriteLine($"vec_2 = {vec_2}");
+            var f_omg_1 = new Function("f_omg_1", Expr.Vec3(0,0,qp_1));
+            var f_omg_2 = new Function("f_omg_2", Expr.Vec3(0,0,qp_1+qp_2));
         }
 
         static string GetMethodName([CallerMemberName] string name = null)

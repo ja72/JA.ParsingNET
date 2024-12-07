@@ -45,8 +45,6 @@ namespace JA.Expressions.Parsing
             return expr;
         }
 
-        // TODO: Parse arrays before assignment
-
         Expr ParseArray()
         {
             var token = tokenizer.Current.Token;

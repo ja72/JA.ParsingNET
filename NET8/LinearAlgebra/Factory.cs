@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
 using System.Numerics;
-using System.Text;
 using System.Threading.Tasks;
 
 using JA.Expressions;
@@ -201,4 +198,5 @@ namespace JA.LinearAlgebra
             => CreateMatrix(diagonals.Length, diagonals.Length, (i, j) => i==j ? diagonals[i] : T.AdditiveIdentity);
 
     }
+
 }

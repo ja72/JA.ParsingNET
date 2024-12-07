@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -59,6 +60,24 @@ namespace JA.Expressions
                 return op.Function(x);
             }
             return new UnaryExpr(op, Argument);
+        }
+        public static Expr Inv(Expr a)
+        {
+            if (a.IsArray(out var a_array))
+            {
+                return Array(UnaryVectorOp(Inv, a_array));
+            }
+            if (a.IsUnary("inv", out var a_arg))
+            {
+                return a_arg;
+            }
+            var op = UnaryOp.FromMethod();
+            if (a.IsConstant(out double x))
+            {
+                return op.Function(x);
+            }
+            return new UnaryExpr(op, a);
+
         }
         public static Expr Sqr(Expr Argument)
         {
@@ -119,13 +138,13 @@ namespace JA.Expressions
         }
         public static Expr Log(Expr Argument, double newBase)
         {
-            return Ln(Argument)/Math.Log(newBase);
+            return Log(Argument)/Math.Log(newBase);
         }
-        public static Expr Ln(Expr Argument)
+        public static Expr Log(Expr Argument)
         {
             if (Argument.IsArray(out var a_array))
             {
-                return Array(UnaryVectorOp(Ln, a_array));
+                return Array(UnaryVectorOp(Log, a_array));
             }
             if (Argument.IsUnary("exp", out var a_arg))
             {

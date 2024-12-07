@@ -60,7 +60,7 @@ namespace JA
         [Op("sqr")] public static double Sqr(double x) => x * x;
         [Op("cub")] public static double Cub(double x) => x * x * x;
         [Op("exp")] public static double Exp(double x) => Math.Exp(x);
-        [Op("ln")] public static double Log(double x) => Math.Log(x);
+        [Op("log")] public static double Log(double x) => Math.Log(x);
         [Op("sqrt")] public static double Sqrt(double x) => Math.Sqrt(x);
         [Op("cbrt")] public static double Cbrt(double x) => Math.Cbrt(x);
         [Op("floor")] public static double Floor(double x) => Math.Floor(x);

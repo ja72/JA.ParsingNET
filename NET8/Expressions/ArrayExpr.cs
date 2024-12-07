@@ -27,7 +27,7 @@ namespace JA.Expressions
             };
         }
 
-        protected internal override void Compile(ILGenerator generator, Dictionary<string, int> envirnoment)
+        protected internal override void Compile(ILGenerator generator, Dictionary<string, (int index, Type type)> envirnoment)
         {
             if (Rank==1)
             {
@@ -91,33 +91,18 @@ namespace JA.Expressions
         public static bool ShowAsTable { get; set; } = false;
         public override string ToString(string formatting, IFormatProvider formatProvider)
         {
-            if (ShowAsTable && Rank == 1)
+            if (ShowAsTable)
             {
-                int n = Elements.GetLength(0);
-                var width = 3;
-                var lines = new string[n];
-                for (int i = 0; i<lines.Length; i++)
+                if (Rank==1)
                 {
-                    lines[i]=Elements[i].ToString(formatting, formatProvider);
-                    width=Math.Max(width, lines[i].Length);
-                }
-                var sb = new StringBuilder();
-                sb.AppendLine();
-                for (int i = 0; i<n; i++)
+                    return Elements.ToTableVector(formatting);
+                } if (Rank==2)
                 {
-                    var row = lines[i];
-                    sb.Append("| ");
-                    sb.Append(row.PadLeft(width));
-                    sb.Append(" |");
-                    sb.AppendLine();
+                    var matrix = ToJagged();
+                    return matrix.ToTableMatrix(formatting);
                 }
-
-                return sb.ToString();
             }
-            else
-            {
-                return $"[{string.Join(",", Elements.Select(x=> x.ToString(formatting, formatProvider)))}]";
-            }
+            return $"[{string.Join(",", Elements.Select(x=> x.ToString(formatting, formatProvider)))}]";
         }
         #endregion
 

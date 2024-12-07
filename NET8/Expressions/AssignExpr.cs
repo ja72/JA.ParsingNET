@@ -14,29 +14,39 @@ namespace JA.Expressions
             return a == b ? 1d : 0d;
         }
         public override int Rank => Max(Left.Rank, Right.Rank);
-        protected internal override void Compile(ILGenerator gen, Dictionary<string, int> env)
+        protected internal override void Compile(ILGenerator gen, Dictionary<string, (int index, Type type)> env)
         {
-	        //// return (a == b) ? 1.0 : 0.0;
+            if (Left.Rank!=Right.Rank)
+            {
+                throw new ArgumentException("Different Rank between left and right.");
+            }
+            if (Left.Rank==1)
+            {
+                //// return (a == b) ? 1.0 : 0.0;
 
-            //IL_0001: ldarg.0
-            Left.Compile(gen, env);
-            //IL_0002: ldarg.1
-            Right.Compile(gen, env);
-            Label IL_10 = gen.DefineLabel();
-            Label IL_19 = gen.DefineLabel();
+                //IL_0001: ldarg.0
+                Left.Compile(gen, env);
+                //IL_0002: ldarg.1
+                Right.Compile(gen, env);
+                Label IL_10 = gen.DefineLabel();
+                Label IL_19 = gen.DefineLabel();
 
-            //IL_0003: beq.s IL_0010
-            gen.Emit(OpCodes.Beq_S, IL_10);
-            //IL_0005: ldc.r8 0.0
-            gen.Emit(OpCodes.Ldc_R8, 0.0);
-            //IL_000e: br.s IL_0019
-            gen.Emit(OpCodes.Br_S, IL_19);
-            //IL_0010: ldc.r8 1
-            gen.MarkLabel(IL_10);
-            gen.Emit(OpCodes.Ldc_R8, 1.0);
-            //IL_0019: 
-            gen.MarkLabel(IL_19);
-
+                //IL_0003: beq.s IL_0010
+                gen.Emit(OpCodes.Beq_S, IL_10);
+                //IL_0005: ldc.r8 0.0
+                gen.Emit(OpCodes.Ldc_R8, 0.0);
+                //IL_000e: br.s IL_0019
+                gen.Emit(OpCodes.Br_S, IL_19);
+                //IL_0010: ldc.r8 1
+                gen.MarkLabel(IL_10);
+                gen.Emit(OpCodes.Ldc_R8, 1.0);
+                //IL_0019: 
+                gen.MarkLabel(IL_19);
+            }
+            else
+            {
+                throw new NotImplementedException("Cannot compile non-scalar assign expressions yet.");
+            }
         }
         public override IQuantity Eval(params (string sym, double val)[] parameters)
         {

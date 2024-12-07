@@ -78,11 +78,11 @@ namespace JA.Expressions
             }
             throw new ArgumentException($"Missing parameter {Name}", nameof(parameters));
         }
-        protected internal override void Compile(ILGenerator gen, Dictionary<string, int> env)
+        protected internal override void Compile(ILGenerator gen, Dictionary<string, (int index, Type type)> env)
         {
-            if (env.ContainsKey(Name))
+            if (env.TryGetValue(Name, out var info))
             {
-                gen.Emit(OpCodes.Ldarg, env[Name]);
+                gen.Emit(OpCodes.Ldarg, info.index);
             }
             else if (IsConstant(out var value))
             {

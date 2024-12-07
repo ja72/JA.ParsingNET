@@ -17,58 +17,63 @@ namespace JA.Expressions
     {
         public Function(string name, Expr body)
             : this(name, body, body.GetSymbols().ToArray())
+        { 
+        }
+        internal Function(string name, Expr[] elements, params string[] arguments)
+            : this(name, Expr.Array(elements), arguments)
         {
         }
-        internal Function(string name, Expr body, params string[] parameters)
+
+        internal Function(string name, Expr body, params string[] arguments)
         {
             var sym = body.GetSymbols();
-            var missing = sym.Except(parameters).ToArray();
+            var missing = sym.Except(arguments).ToArray();
             if (missing.Length>0)
             {
-                throw new ArgumentOutOfRangeException(nameof(parameters),
+                throw new ArgumentOutOfRangeException(nameof(arguments),
                     $"Missing {string.Join(",", missing)} from parameter list.");
             }
             Name = name;
             Body = body;
-            Parameters = parameters;
+            Arguments = arguments;
         }
 
         #region Properties
         public string Name { get; }
         public Expr Body { get; }
-        public string[] Parameters { get; }
-        public int Rank => Body.Rank;
+        public string[] Arguments { get; }
+        public int Rank => Body.Rank;        
         #endregion
 
         #region Calculus
         public Function TotalDerivative() => TotalDerivative($"{Name}'");
         public Function TotalDerivative(string name)
         {
-            var paramsAndDots = new List<string>(Parameters);
+            var paramsAndDots = new List<string>(Arguments);
             var body = Body.TotalDerivative(ref paramsAndDots);
             return new Function(name, body, paramsAndDots.ToArray());
         }
         public Function TotalDerivative(string name, params (string sym, Expr expr)[] parameters)
         {
-            var paramsAndDots = new List<string>(Parameters);
+            var paramsAndDots = new List<string>(Arguments);
             var body = Body.TotalDerivative(parameters, ref paramsAndDots);
             return new Function(name, body, paramsAndDots.ToArray());
         }
         public Function PartialDerivative(string variable)
         {
             var body = Body.PartialDerivative(variable);
-            return new Function($"{Name}_{variable}", body, Parameters);
+            return new Function($"{Name}_{variable}", body, Arguments);
         }
 
-        public Expr Jacobian() => Body.Jacobian(Parameters);
+        public Expr Jacobian() => Body.Jacobian(Arguments);
 
         public IQuantity NewtonRaphson(IQuantity init, double target = 0, double tolerance = 1e-11, int maxIter = 100)
         {
-            if (init.IsScalar && Parameters.Length != 1)
+            if (init.IsScalar && Arguments.Length != 1)
             {
                 throw new ArgumentException("Missing parameters from inital values.", nameof(init));
             }
-            if (init.IsArray && init.Array.Length != Parameters.Length)
+            if (init.IsArray && init.Array.Length != Arguments.Length)
             {
                 throw new ArgumentException("Missing parameters from inital values.", nameof(init));
             }
@@ -76,10 +81,10 @@ namespace JA.Expressions
             {
                 throw new NotSupportedException($"Rank:{Rank} is not supported.");
             }
-            if (init.IsScalar &&  Parameters.Length==1)
+            if (init.IsScalar &&  Arguments.Length==1)
             {
                 var fx = CompileArg1();
-                var fx_x = PartialDerivative(Parameters[0]).CompileArg1();
+                var fx_x = PartialDerivative(Arguments[0]).CompileArg1();
                 var x = init.Value;
                 var f = fx(x);
                 var e = Math.Abs(f-target);
@@ -103,11 +108,11 @@ namespace JA.Expressions
                 }
                 return (Scalar)x;
             }
-            else if (init.IsArray && Parameters.Length==2)
+            else if (init.IsArray && Arguments.Length==2)
             {
                 var fxy = CompileArg2();
-                var fxy_x = PartialDerivative(Parameters[0]).CompileArg2();
-                var fxy_y = PartialDerivative(Parameters[1]).CompileArg2();
+                var fxy_x = PartialDerivative(Arguments[0]).CompileArg2();
+                var fxy_y = PartialDerivative(Arguments[1]).CompileArg2();
                 var x = init.Array[0];
                 var y = init.Array[1];
                 var f = fxy(x,y);
@@ -140,14 +145,14 @@ namespace JA.Expressions
             }
             // TODO: Consider implementing the following in general
             // https://people.duke.edu/~kh269/teaching/b553/newtons_method.pdf
-            throw new NotSupportedException($"{Parameters.Length} parameters not supported.");
+            throw new NotSupportedException($"{Arguments.Length} parameters not supported.");
         }
         #endregion
 
         #region Algebra
         public Function Substitute(string name, params (string symbol, double values)[] parameters)
         {
-            List<string> arg = new(Parameters);
+            List<string> arg = new(Arguments);
             Expr expr = Body.Substitute(parameters);
             foreach (var (symbol, _) in parameters)
             {
@@ -157,7 +162,7 @@ namespace JA.Expressions
         }
         public Function Substitute(string name, params (string symbol, Expr subExpression)[] parameters)
         {
-            List<string> arg = new(Parameters);
+            List<string> arg = new(Arguments);
             Expr expr = Body.Substitute(parameters);
             foreach (var (symbol, _) in parameters)
             {
@@ -195,23 +200,30 @@ namespace JA.Expressions
             var mod = asm.DefineDynamicModule("Lightweight");
 
             var tpe = mod.DefineType("Code");
-            var ret = typeof(T).GetMethod("Invoke").ReturnType;
-
+            Type t_delegate = typeof(T);
+            MethodInfo m_invoke = t_delegate.GetMethod("Invoke");
+            // Return type
+            var ret = m_invoke.ReturnType;
+            //var arg_types = Enumerable.Repeat(typeof(double), Arguments.Length).ToArray();
+            var args = m_invoke.GetParameters();
+            // Get types for all arguments
+            var arg_types = args.Select(a=> a.ParameterType).ToArray();
+            if (arg_types.Length!=Arguments.Length)
+            {
+                throw new InvalidCastException($"Expecting delegate type with {Arguments.Length} arguments.");
+            }
             var mtd = tpe.DefineMethod("Generation",
                 MethodAttributes.Public | MethodAttributes.Static,
-                // Return type
                 ret,
-                // Every of the Parameters.Count parameters is of type int as well
-                Enumerable.Repeat(typeof(double), Parameters.Length).ToArray()
+                arg_types
             );
 
             // Establish environment; we could also use a List<T> and use IndexOf
             // in the recursive compilation code to find the parameter's index.
-            var env = new Dictionary<string, int>();
-            int arg = 0;
-            foreach (var par in Parameters)
+            var env = new Dictionary<string, (int index, Type type)>();
+            for (int index = 0; index<Arguments.Length; index++)
             {
-                env[par] = arg++;
+                env[ Arguments[index] ] = (index, arg_types[index]);
             }
 
             // Compilation is requested for the Body, and a final "ret" instruction
@@ -247,18 +259,28 @@ namespace JA.Expressions
             // Create a delegate of the specified type, referring to the generated
             // method which we always call "Generation" (see the DefineMethod call).
             return (T)(object)Delegate.CreateDelegate(
-                typeof(T),
+                t_delegate,
                 res.GetMethod("Generation"));
         }
 
         #endregion
 
         #region Formatting
+        public static bool ShowAsTable { get; set; } = true;
         public override string ToString() => ToString("g");
         public string ToString(string formatting) => ToString(formatting, null);
         public string ToString(string format, IFormatProvider provider)
         {
-            return $"{Name}({string.Join(",", Parameters)})={Body.ToString(format, provider)}";
+            var label = $"{Name}({string.Join(",", Arguments)}) = ";
+            if (ShowAsTable)
+            {
+                if (Rank==1)
+                {
+                    return Body.ToArray().ToTableVector(format, label);
+                }
+            }
+            string expr_str = Body.ToString(format, provider);
+            return $"{Name}({string.Join(",", Arguments)})={expr_str}";
         }
         #endregion
 

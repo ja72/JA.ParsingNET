@@ -10,7 +10,7 @@ namespace JA.Expressions
     public record BinaryExpr(BinaryOp Op, Expr Left, Expr Right) : Expr
     {
         public override int Rank { get; } = Max(Left.Rank, Right.Rank);
-        protected internal override void Compile(ILGenerator gen, Dictionary<string, int> env)
+        protected internal override void Compile(ILGenerator gen, Dictionary<string, (int index, Type type)> env)
         {
             //IL_0001: ldarg.0
             Left.Compile(gen, env);
@@ -67,7 +67,7 @@ namespace JA.Expressions
                 "-" => xp - yp,
                 "*" => y * xp + x * yp,
                 "/" => (y * xp - x * yp) / Sqr(y),
-                "^" => Power(x, y - 1) * (y * xp + x * Ln(x) * yp),
+                "^" => Power(x, y - 1) * (y * xp + x * Log(x) * yp),
                 _ => throw new NotSupportedException($"f'(x{Op.Identifier}y)"),
             };
 

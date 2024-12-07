@@ -115,8 +115,8 @@ namespace JA.Expressions
 #pragma warning disable IDE0011 // Add braces
                 if (Op.Identifier=="-"&&argOp=="-") return argArg;
                 if (Op.Identifier=="inv"&&argOp=="inv") return argArg;
-                if (Op.Identifier=="ln"&&argOp=="exp") return argArg;
-                if (Op.Identifier=="exp"&&argOp=="ln") return argArg;
+                if (Op.Identifier=="log"&&argOp=="exp") return argArg;
+                if (Op.Identifier=="exp"&&argOp=="log") return argArg;
                 if (Op.Identifier=="sqrt"&&argOp=="sqr") return Abs(argArg);
                 if (Op.Identifier=="cbrt"&&argOp=="cub") return argArg;
                 if (Op.Identifier=="cub"&&argOp=="cbrt") return argArg;
@@ -141,7 +141,7 @@ namespace JA.Expressions
                 "+"     => Argument,
                 "-"     => Negate(Argument),
                 "inv"   => 1/Argument,
-                "ln"    => Ln(Argument),
+                "log"   => Log(Argument),
                 "exp"   => Exp(Argument),
                 "sqrt"  => Sqrt(Argument),
                 "sqr"   => Sqr(Argument),

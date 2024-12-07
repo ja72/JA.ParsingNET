@@ -2,10 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection.Emit;
-using JA.Expressions;
 
 namespace JA
 {
+    using JA.Expressions;
+    using JA.LinearAlgebra;
+
     public delegate double FArg0();
     public delegate double FArg1(double arg1);
     public delegate double FArg2(double arg1, double arg2);
@@ -18,6 +20,10 @@ namespace JA
     public delegate IQuantity QArg0();
     public delegate IQuantity QArg1(double arg1);
     public delegate IQuantity QArg2(double arg1, double arg2);
+    public delegate IQuantity QArg3(double arg1, double arg2, double arg3);
+
+    public delegate double[] QFirstOrder (double arg0, double[] arg1);
+    public delegate double[] QSecondOrder(double arg0, double[] arg1, double[] arg2);
 
     public static class Extensions
     {

@@ -13,7 +13,7 @@ namespace JA.Expressions
         public static implicit operator double(ConstExpr expression) => expression.Value;
         public override int Rank { get; } = 0;
         public int Count { get; } = 1;
-        protected internal override void Compile(ILGenerator gen, Dictionary<string, int> env)
+        protected internal override void Compile(ILGenerator gen, Dictionary<string, (int index, Type type)> env)
         {
             gen.Emit(OpCodes.Ldc_R8, Value);
         }

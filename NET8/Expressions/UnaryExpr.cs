@@ -24,7 +24,7 @@ namespace JA.Expressions
                 _ => throw new NotSupportedException("Rank > 2 is not supported."),
             };
         }
-        protected internal override void Compile(ILGenerator gen, Dictionary<string, int> env)
+        protected internal override void Compile(ILGenerator gen, Dictionary<string, (int index, Type type)> env)
         {
             Argument.Compile(gen, env);
             switch (Op.Identifier)
@@ -41,9 +41,10 @@ namespace JA.Expressions
                     gen.Emit(OpCodes.Conv_R8);
                     break;
                 case "inv":
-                    gen.Emit(OpCodes.Stloc_0);
+                    var index = gen.DeclareLocal(typeof(double), false).LocalIndex;
+                    gen.Emit(OpCodes.Stloc, index);
                     gen.Emit(OpCodes.Ldc_R8, 1.0);
-                    gen.Emit(OpCodes.Ldloc_0);
+                    gen.Emit(OpCodes.Ldloc, index);
                     gen.Emit(OpCodes.Div);
                     break;
                 case "pi":
@@ -78,7 +79,7 @@ namespace JA.Expressions
                 "neg" => -xp,
                 "inv" => -xp / (x ^ 2),
                 "exp" => Exp(x) * xp,
-                "ln" => xp / x,
+                "log" => xp / x,
                 "sin" => Cos(x)*xp,
                 "cos" => -Sin(x)*xp,
                 "tan" => 1/(Cos(x)^2)*xp,

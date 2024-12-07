@@ -43,7 +43,6 @@ namespace JA.Expressions
         public static Expr operator ^(Expr a, Expr b) => Power(a, b);
         #endregion
 
-
         #region Functions
         public static Expr Add(Expr Left, Expr Right)
         {
@@ -381,59 +380,68 @@ namespace JA.Expressions
             return new BinaryExpr("*", A, B);
         }
 
-        public static Expr Divide(Expr A, Expr B)
+        public static Expr Divide(Expr a, Expr b)
         {
-            if (IsVectorizable(A, B, out var a_array, out var b_array, true))
+            if (IsVectorizable(a, b, out var a_array, out var b_array, true))
             {
                 return Array(BinaryVectorOp(Divide, a_array, b_array));
             }
-            if (A.IsUnary("-", out Expr negA) && B.IsUnary("-", out Expr negB))
+            if (a.IsUnary("-", out Expr negA) && b.IsUnary("-", out Expr negB))
             {
                 return negA/negB;
             }
-            if (A.IsUnary("-", out Expr negA2))
+            if (a.IsUnary("-", out Expr negA2))
             {
-                return -(negA2/B);
+                return -(negA2/b);
             }
-            if (B.IsUnary("-", out Expr negB2))
+            if (b.IsUnary("-", out Expr negB2))
             {
-                return -(A/negB2);
+                return -(a/negB2);
             }
-            if (A.IsUnary("sqrt", out Expr sqrtA)
-                && B.IsUnary("sqrt", out Expr sqrtB))
+            if (a.IsUnary("sqrt", out Expr sqrtA)
+                && b.IsUnary("sqrt", out Expr sqrtB))
             {
                 return Sqrt(sqrtA/sqrtB);
             }
-            if (A.IsUnary("sqrt", out Expr sqrtA2) && sqrtA2.Equals(B))
+            if (a.IsUnary("sqrt", out Expr sqrtA2) && sqrtA2.Equals(b))
             {
                 // √B/B = 1/√B
-                return 1 / Sqrt(B);
+                return 1 / Sqrt(b);
             }
-            if (B.IsUnary("sqrt", out Expr sqrtB2) && sqrtB2.Equals(A))
+            if (b.IsUnary("sqrt", out Expr sqrtB2) && sqrtB2.Equals(a))
             {
                 // A/√A = √A
-                return Sqrt(A);
+                return Sqrt(a);
             }
 
-            if (A.IsConstant(out double x) && B.IsConstant(out double y))
+            if (a.IsConstant(out double x) && b.IsConstant(out double y))
             {
                 return x / y;
             }
-            if (A.IsConstant(out double a_const, true))
+            if (a.IsConstant(out double a_const, true))
             {
-                if (a_const == 0)
-                {
-                    return 0;
-                }
+                if (a_const == 0) return 0;
+                if (a_const == 1) return Inv(b);
+                if (a_const == -1) return -Inv(b);
+                if (Math.Abs(a_const)<0.2) return Inv(( 1/a_const )*b);
+                return a_const*Inv(b);
             }
-            if (A.IsConstant(out a_const))
+            if (a.IsUnary("inv", out var a_arg2)&&b.IsUnary("inv", out var b_arg2))
             {
-                if (a_const<0.2)
-                {
-                    return 1/((1/a_const)*B);
-                }
+                // (1/a) / (1/b) = b/a
+                return b_arg2/a_arg2;
             }
-            if (B.IsConstant(out double b_const, true))
+            if (a.IsUnary("inv", out var a_arg))
+            {
+                // (1/a)/b = 1/(a*b)
+                return Inv(a_arg*b);
+            }
+            if (b.IsUnary("inv", out var b_arg))
+            {
+                // a/(1/b) = a*b
+                return a*b_arg;
+            }
+            if (b.IsConstant(out double b_const, true))
             {
                 if (b_const == 0)
                 {
@@ -441,12 +449,12 @@ namespace JA.Expressions
                 }
                 if (b_const == 1)
                 {
-                    return A;
+                    return a;
                 }
             }
-            if (B.IsConstant(out b_const))
+            if (b.IsConstant(out b_const))
             {
-                if (A.IsBinary("*", out var a_mul_left, out var a_mul_right))
+                if (a.IsBinary("*", out var a_mul_left, out var a_mul_right))
                 {
                     if (a_mul_left.IsConstant(out var a_mul_left_const))
                     {
@@ -457,7 +465,7 @@ namespace JA.Expressions
                         return (a_mul_right_const/b_const) * a_mul_left;
                     }
                 }
-                if (A.IsBinary("/", out var a_div_left, out var a_div_right))
+                if (a.IsBinary("/", out var a_div_left, out var a_div_right))
                 {
                     if (a_div_left.IsConstant(out var a_div_left_const))
                     {
@@ -470,55 +478,55 @@ namespace JA.Expressions
                 }
                 if (Math.Abs(b_const)<0.2)
                 {
-                    return (1/b_const)*A;
+                    return (1/b_const)*a;
                 }
             }
-            if (A.Equals(B))
+            if (a.Equals(b))
             {
                 return 1;
             }
-            if (A.IsFactor(out double a_factor, out var a_arg)
-                && B.IsFactor(out double b_factor, out var b_arg))
+            if (a.IsFactor(out double a_factor, out var a_argf)
+                && b.IsFactor(out double b_factor, out var b_argf))
             {
                 if (a_factor!=1 && b_factor!=1)
                 {
-                    return (a_factor/b_factor)*(a_arg/b_arg);
+                    return (a_factor/b_factor)*(a_argf/b_argf);
                 }
             }
-            if (A.IsBinary(out var aop, out var a_left, out var a_right)
-                && B.IsBinary(out var bop, out var b_left, out var b_right))
+            if (a.IsBinary(out var aop, out var a_left, out var a_right)
+                && b.IsBinary(out var bop, out var b_left, out var b_right))
             {
                 if (aop=="/" && bop=="/")
                 {
                     return (a_left*b_right)/(a_right*b_left);
                 }
             }
-            if (B.IsBinary(out bop, out b_left, out b_right))
+            if (b.IsBinary(out bop, out b_left, out b_right))
             {
                 if (bop=="*")
                 {
                     if (b_left.IsFactor(out var b_left_factor, out var b_left_arg) && b_left_factor!=1)
                     {
-                        return (1/b_left_factor)*(A/(b_left_arg*b_right));
+                        return (1/b_left_factor)*(a/(b_left_arg*b_right));
                     }
                     if (b_right.IsFactor(out var b_right_factor, out var b_right_arg) && b_right_factor!=1)
                     {
-                        return (1/b_right_factor)*(A/(b_left  *b_right_arg));
+                        return (1/b_right_factor)*(a/(b_left  *b_right_arg));
                     }
                 }
                 if (bop=="/")
                 {
                     if (b_left.IsFactor(out var b_left_factor, out var b_left_arg) && b_left_factor!=1)
                     {
-                        return (1/b_left_factor)*(A*b_right/b_left_arg);
+                        return (1/b_left_factor)*(a*b_right/b_left_arg);
                     }
                     if (b_right.IsFactor(out var b_right_factor, out var b_right_arg) && b_right_factor!=1)
                     {
-                        return (b_right_factor)*(A*b_right_arg/b_left);
+                        return (b_right_factor)*(a*b_right_arg/b_left);
                     }
                 }
             }
-            return new BinaryExpr("/", A, B);
+            return new BinaryExpr("/", a, b);
         }
 
         public static Expr Sum(params Expr[] terms)
